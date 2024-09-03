@@ -31,7 +31,7 @@ const (
 )
 
 const (
-	TxNumberPerAccount = 20
+	TxNumberPerAccount = 5
 )
 
 var (
@@ -78,7 +78,7 @@ func startLegacyTxMaker(accounts []*Account, txQueue chan *types.Transaction) {
 	close(txQueue)
 }
 
-func start1559TxMaker(accounts []*Account, txQueue chan *types.Transaction) {
+func start1559TxMaker(accounts []*Account, txQueue chan *AccountTransaction) {
 	var data []byte
 
 	dynamicFeeTx := &types.DynamicFeeTx{
@@ -100,7 +100,10 @@ func start1559TxMaker(accounts []*Account, txQueue chan *types.Transaction) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			txQueue <- signedTx
+			txQueue <- &AccountTransaction{
+				tx:   signedTx,
+				addr: account.addr,
+			}
 			account.nonce += 1
 		}
 	}

@@ -4,8 +4,14 @@ import (
 	"log"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
+
+type AccountTransaction struct {
+	tx   *types.Transaction
+	addr common.Address
+}
 
 func main() {
 	accounts := Load()
@@ -15,7 +21,7 @@ func main() {
 	log.Println("sync accounts nonce finish")
 
 	wg := &sync.WaitGroup{}
-	txQueue := make(chan *types.Transaction, QueueSize)
+	txQueue := make(chan *AccountTransaction, QueueSize)
 
 	StartTxSenderPool(wg, txQueue)
 	start1559TxMaker(accounts, txQueue)

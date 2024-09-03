@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -14,14 +14,19 @@ const (
 	RPC              = "http://192.168.100.77:28545"
 )
 
-func StartTxSenderPool(wg *sync.WaitGroup, txQueue chan *types.Transaction) {
+func StartTxSenderPool(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 	wg.Add(TxSenderPoolSize)
 	for i := 0; i < TxSenderPoolSize; i++ {
 		go startTxSender(wg, txQueue)
 	}
 }
 
-func startTxSender(wg *sync.WaitGroup, txQueue chan *types.Transaction) {
+const (
+	MaxRetry      = 100
+	RetryInterval = time.Second * 5
+)
+
+func startTxSender(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 	defer wg.Done()
 
 	c, err := ethclient.Dial(RPC)
@@ -30,13 +35,24 @@ func startTxSender(wg *sync.WaitGroup, txQueue chan *types.Transaction) {
 	}
 	defer c.Close()
 
+	retryCnt := 0
 	for tx := range txQueue {
-		err = c.SendTransaction(context.Background(), tx)
-		if err != nil {
-			log.Printf("failed to send transaction: %v", err)
-		} else {
-			//j, _ := tx.MarshalJSON()
-			//log.Println(string(j))
+		retryCnt = 0
+		for retryCnt < MaxRetry {
+			err = c.SendTransaction(context.Background(), tx.tx)
+			if err != nil {
+				retryCnt++
+				log.Printf("SendTransaction failed %d times, addr: %s, err: %v", retryCnt, tx.addr.Hex(), err)
+				time.Sleep(RetryInterval)
+			} else {
+				break
+			}
+		}
+
+		if retryCnt == MaxRetry {
+			txStr, _ := tx.tx.MarshalJSON()
+			log.Printf("SendTransaction failed max retry times, addr: %s, tx: %s\n", tx.addr.Hex(), string(txStr))
+			break
 		}
 	}
 
