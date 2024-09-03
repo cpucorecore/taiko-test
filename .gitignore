@@ -1,5 +1,5 @@
 .idea
-scripts/main_pk
-scripts/accounts
-scripts/addrs
-scripts/priks
+scripts/main_pk*
+scripts/accounts*
+scripts/addrs*
+scripts/priks*
