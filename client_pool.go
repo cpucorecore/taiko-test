@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +43,14 @@ func startTxSender(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 			err = c.SendTransaction(context.Background(), tx.tx)
 			if err != nil {
 				retryCnt++
+				if err.Error() == "already known" {
+					break
+				}
+
+				if strings.Contains(err.Error(), "insufficient funds") {
+					break
+				}
+
 				log.Printf("SendTransaction failed %d times, addr: %s, err: %v", retryCnt, tx.addr.Hex(), err)
 				time.Sleep(RetryInterval)
 			} else {

@@ -31,7 +31,7 @@ const (
 )
 
 const (
-	TxNumberPerAccount = 5
+	TxNumberPerAccount = 20
 )
 
 var (
