@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	QueueSize = 200000
+	QueueSize = 500000
 )
 
 const (

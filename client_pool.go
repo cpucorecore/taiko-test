@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -20,11 +21,22 @@ func StartTxSenderPool(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 	for i := 0; i < TxSenderPoolSize; i++ {
 		go startTxSender(wg, txQueue)
 	}
+
+	go func() {
+		for {
+			log.Printf("failCounter:%d\n", failCounter.Load())
+			time.Sleep(time.Second * 1)
+		}
+	}()
 }
 
 const (
 	MaxRetry      = 100
 	RetryInterval = time.Second * 5
+)
+
+var (
+	failCounter atomic.Uint64
 )
 
 func startTxSender(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
@@ -42,6 +54,7 @@ func startTxSender(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 		for retryCnt < MaxRetry {
 			err = c.SendTransaction(context.Background(), tx.tx)
 			if err != nil {
+				failCounter.Add(1)
 				retryCnt++
 				if err.Error() == "already known" {
 					break
@@ -54,6 +67,7 @@ func startTxSender(wg *sync.WaitGroup, txQueue chan *AccountTransaction) {
 				log.Printf("SendTransaction failed %d times, addr: %s, err: %v", retryCnt, tx.addr.Hex(), err)
 				time.Sleep(RetryInterval)
 			} else {
+				bar.Increment()
 				break
 			}
 		}
